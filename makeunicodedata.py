@@ -32,7 +32,7 @@ import zipfile
 from textwrap import dedent
 
 SCRIPT = sys.argv[0]
-VERSION = "3.2"
+VERSION = "3.3"
 
 # The Unicode Database
 UNIDATA_VERSION = "12.0.0"
@@ -48,6 +48,7 @@ NAMED_SEQUENCES = "NamedSequences%s.txt"
 SPECIAL_CASING = "SpecialCasing%s.txt"
 CASE_FOLDING = "CaseFolding%s.txt"
 SCRIPTS = "Scripts%s.txt"
+BLOCKS = "Blocks%s.txt"
 BIDI_MIRRORING = "BidiMirroring%s.txt"
 BIDI_BRACKETS = "BidiBrackets%s.txt"
 
@@ -100,6 +101,8 @@ SCRIPT_NAMES = [ "Common", "Latin", "Greek", "Cyrillic", "Armenian",
     "Medefaidrin", "Old_Sogdian", "Sogdian", "Elymaic", "Nandinagari",
     "Nyiakeng_Puachue_Hmong", "Wancho"
     ]
+
+BLOCK_NAMES = ['No_Block'] # Block names will be read from Blocks.txt
 
 EASTASIANWIDTH_NAMES = [ "F", "H", "W", "Na", "A", "N" ]
 
@@ -158,7 +161,7 @@ def maketables(trace=0):
 def makeunicodedata(unicode, trace):
 
     dummy = (CATEGORY_NAMES.index("Cn"), 0, BIDIRECTIONAL_NAMES.index("ON"),
-        EASTASIANWIDTH_NAMES.index("N"), SCRIPT_NAMES.index("Unknown"),
+        EASTASIANWIDTH_NAMES.index("N"), SCRIPT_NAMES.index("Unknown"), BLOCK_NAMES.index("No_Block"),
         LINEBREAK_CLASSES.index("XX"))
     table = [dummy]
     cache = {0: dummy}
@@ -179,10 +182,11 @@ def makeunicodedata(unicode, trace):
             bidirectional = BIDIRECTIONAL_NAMES.index(record[4])
             eastasianwidth = EASTASIANWIDTH_NAMES.index(record[15])
             scriptname = SCRIPT_NAMES.index(record[18])
-            linebreakclass = LINEBREAK_CLASSES.index(record[19])
+            blockname = BLOCK_NAMES.index(record[19])
+            linebreakclass = LINEBREAK_CLASSES.index(record[20])
             item = (
                 category, combining, bidirectional, eastasianwidth,
-                scriptname, linebreakclass
+                scriptname, blockname, linebreakclass
                 )
             # add entry to index and item tables
             i = cache.get(item)
@@ -300,7 +304,7 @@ def makeunicodedata(unicode, trace):
     print("/* a list of unique database records */", file=fp)
     print("static const UCDRecord ucd_records[] = {", file=fp)
     for item in table:
-        print("    {%d, %d, %d, %d, %d, %d}," % item, file=fp)
+        print("    {%d, %d, %d, %d, %d, %d, %d}," % item, file=fp)
     print("};", file=fp)
     print(file=fp)
 
@@ -363,6 +367,10 @@ def makeunicodedata(unicode, trace):
 
     for name in SCRIPT_NAMES:
         print("#define UCDN_SCRIPT_%s %d" % (name.upper(), SCRIPT_NAMES.index(name)), file=fp)
+    print(file=fp)
+
+    for block in BLOCK_NAMES:
+        print("#define UCDN_BLOCK_%s %d" % (block.replace(" ", "_").replace("-", "_").upper(), BLOCK_NAMES.index(block)), file=fp)
     print(file=fp)
 
     """
@@ -981,7 +989,7 @@ class UnicodeData:
     # [ID, name, category, combining, bidi, decomp,  (6)
     #  decimal, digit, numeric, bidi-mirrored, Unicode-1-name, (11)
     #  ISO-comment, uppercase, lowercase, titlecase, ea-width, (16)
-    #  derived-props, quickchecks, scripts, linebreak-class] (20)
+    #  derived-props, quickchecks, scripts, block, linebreak-class] (21)
 
     def __init__(self, version,
                  linebreakprops=False,
@@ -1192,6 +1200,25 @@ class UnicodeData:
                     first, last = [int(c, 16) for c in s[0].split('..')]
                 for char in range(first, last+1):
                     table[char][-1] = s[1]
+
+        for i in range(0, 0x110000):
+            if table[i] is not None:
+                table[i].append("No_Block")
+
+        with open_data(BLOCKS, version) as file:
+            for s in file:
+                s = s.partition('#')[0]
+                s = [i.strip() for i in s.split(';')]
+                if len(s) < 2:
+                    continue
+                if '..' not in s[0]:
+                    first = last = int(s[0], 16)
+                else:
+                    first, last = [int(c, 16) for c in s[0].split('..')]
+                for char in range(first, last+1):
+                    table[char][-1] = s[1]
+                if s[1] not in BLOCK_NAMES:
+                    BLOCK_NAMES.append(s[1])
 
         for i in range(0, 0x110000):
             if table[i] is not None:

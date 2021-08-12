@@ -294,6 +294,12 @@ static const TestTuple script_tests[] =
     { 0x111111, UCDN_SCRIPT_UNKNOWN }
 };
 
+static const TestTuple block_tests[] =
+{
+    {   0x002A, UCDN_BLOCK_BASIC_LATIN },
+    { 0x111111, UCDN_BLOCK_NO_BLOCK }
+};
+
 START_TEST(test_basic)
 {
     /* check versio */
@@ -337,6 +343,12 @@ START_TEST(test_script)
 {
     ck_assert_int_eq(ucdn_get_script(script_tests[_i].input), script_tests[_i].comp);
 }
+
+START_TEST(test_block)
+{
+    ck_assert_int_eq(ucdn_get_block(block_tests[_i].input), block_tests[_i].comp);
+}
+
 END_TEST
 
 START_TEST(test_combining_class)
@@ -551,6 +563,7 @@ int main(int argc, char **argv)
     tcase_add_test(t, test_basic);
     tcase_add_loop_test(t, test_general_category, 0, sizeof(general_category_tests) / sizeof(TestTuple));
     tcase_add_loop_test(t, test_script, 0, sizeof(script_tests) / sizeof(TestTuple));
+    tcase_add_loop_test(t, test_block, 0, sizeof(block_tests) / sizeof(TestTuple));
     tcase_add_loop_test(t, test_combining_class, 0, sizeof(combining_class_tests) / sizeof(TestTuple));
     tcase_add_loop_test(t, test_eastasian_width, 0, sizeof(eastasian_width_tests) / sizeof(TestTuple));
     tcase_add_test(t, test_decompose_basic);

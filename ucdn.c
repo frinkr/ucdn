@@ -25,6 +25,7 @@ typedef struct {
     unsigned char bidi_class;
     unsigned char east_asian_width;
     unsigned char script;
+    unsigned short block;
     unsigned char linebreak_class;
 } UCDRecord;
 
@@ -225,6 +226,11 @@ int ucdn_get_mirrored(uint32_t code)
 int ucdn_get_script(uint32_t code)
 {
     return get_ucd_record(code)->script;
+}
+
+int ucdn_get_block(uint32_t code)
+{
+    return get_ucd_record(code)->block;
 }
 
 int ucdn_get_linebreak_class(uint32_t code)
